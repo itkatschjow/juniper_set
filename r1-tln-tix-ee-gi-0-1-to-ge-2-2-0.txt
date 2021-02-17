@@ -1,0 +1,70 @@
+krocop@r1-MSK-EE> configure 
+Entering configuration mode
+
+{master}[edit]
+krocop@r1-MSK-EE# load patch /tmp/r1-tln-tix-ee-gi-0-1-to-ge-2-2-0 
+load complete
+
+{master}[edit]
+krocop@r1-MSK-EE# show | compare 
+[edit groups service:ECG class-of-service traffic-control-profiles]
+     ECG-1G-out { ... }
++    ECG-4Mbps-out {
++        scheduler-map ecg:default-scheduler;
++        shaping-rate 4m;
++        guaranteed-rate 4m;
++    }
+[edit groups TCEL:T-Mobile interfaces]
++    ge-2/2/0 {
++        unit 108 {
++            description "TCEL: T-Mobile / ECG-GTS-FRA-TLN-111620 / [NO #111620]";
++            encapsulation vlan-ccc;
++            bandwidth 4m;
++            vlan-id 108;
++            input-vlan-map pop;
++            output-vlan-map push;
++            family ccc {
++                mtu 1534;
++                policer {
++                    input bw-4Mbps;
++                }
++            }
++        }
++    }
+[edit groups TCEL:T-Mobile protocols l2circuit neighbor 10.128.122.42]
+       interface ge-2/0/6.1015 { ... }
++      interface ge-2/2/0.108 {
++          psn-tunnel-endpoint 62.128.122.142;
++          virtual-circuit-id 4224006;
++          description "TCEL: T-Mobile / ECG-GTS-FRA-TLN-228620 / [NO #228620]";
++          mtu 1534;
++      }
+[edit groups TCEL:T-Mobile class-of-service interfaces]
++     ge-2/2/0 {
++         unit 108 {
++             forwarding-class af;
++             output-traffic-control-profile ECG-4Mbps-out;
++         }
++     }
+[edit interfaces ge-2/2/0]
+-   apply-groups interface:disabled;
++   apply-groups NNI:_default_;
++   description "E-NNI: RAD Egate / EE1-EG2K-01 ETH-1-9-8";
++   unit 108 {
++       apply-groups TCEL:T-Mobile;
++   }
+[edit protocols l2circuit]
+-   apply-groups [ core:protocols:l2circuit service:Ether service:ECG DIA:EE-OFFICE ECG:BITE-SMP11 ECG:auto24 ECG:LV-NRV11D ECG:BITE-Tulika19c ECG:LV-MoFA ECG:EE-AURINKO ECG:EE-OMX-EE-EE-111108 ECG:DNA ECG:DGC ECG:TESTER-111738 service:TCEL ];
++   apply-groups [ core:protocols:l2circuit service:Ether service:ECG DIA:EE-OFFICE ECG:BITE-SMP11 ECG:auto24 ECG:LV-NRV11D ECG:BITE-Tulika19c ECG:LV-MoFA ECG:EE-AURINKO ECG:EE-OMX-EE-EE-111108 ECG:DNA ECG:DGC ECG:TESTER-111738 service:TCEL TCEL:T-Mobile ];
+[edit class-of-service interfaces]
++    ge-2/2/0 {
++        apply-groups access:per-unit-sched;
++        apply-groups-except [ access:interfaces core:QoS ];
++        unit 108 {
++            apply-groups TCEL:T-Mobile;
++            apply-groups-except access:per-unit-sched;
++        }                              
++    }
+
+{master}[edit]
+krocop@r1-MSK-EE# 
